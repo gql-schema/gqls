@@ -1,0 +1,12 @@
+input: |-
+  CREATE PROPERTY GRAPH someGraphType {
+    (:Post { foo :: INT8, bar :: INT16, baz :: INT, qux :: INT(31) })
+  }
+want: |-
+  CREATE CONSTRAINT type_post_foo FOR (n:Post) REQUIRE n.foo IS :: INTEGER;
+  CALL apoc.trigger.add("numeric_range_post_foo", "UNWIND $createdNodes AS e WITH e WHERE e:Post AND e.foo IS NOT NULL AND (e.foo < -128 OR e.foo > 127) CALL apoc.util.validate(true, 'foo must be between -128 and 127', []) RETURN NULL UNION UNWIND keys($assignedNodeProperties) AS prop UNWIND $assignedNodeProperties[prop] AS change WITH change WHERE change.node:Post AND change.key = \"foo\" AND change.new IS NOT NULL AND (change.new < -128 OR change.new > 127) CALL apoc.util.validate(true, 'foo must be between -128 and 127', []) RETURN NULL", {phase: "before"});
+  CREATE CONSTRAINT type_post_bar FOR (n:Post) REQUIRE n.bar IS :: INTEGER;
+  CALL apoc.trigger.add("numeric_range_post_bar", "UNWIND $createdNodes AS e WITH e WHERE e:Post AND e.bar IS NOT NULL AND (e.bar < -32768 OR e.bar > 32767) CALL apoc.util.validate(true, 'bar must be between -32768 and 32767', []) RETURN NULL UNION UNWIND keys($assignedNodeProperties) AS prop UNWIND $assignedNodeProperties[prop] AS change WITH change WHERE change.node:Post AND change.key = \"bar\" AND change.new IS NOT NULL AND (change.new < -32768 OR change.new > 32767) CALL apoc.util.validate(true, 'bar must be between -32768 and 32767', []) RETURN NULL", {phase: "before"});
+  CREATE CONSTRAINT type_post_baz FOR (n:Post) REQUIRE n.baz IS :: INTEGER;
+  CREATE CONSTRAINT type_post_qux FOR (n:Post) REQUIRE n.qux IS :: INTEGER;
+  CALL apoc.trigger.add("numeric_range_post_qux", "UNWIND $createdNodes AS e WITH e WHERE e:Post AND e.qux IS NOT NULL AND (e.qux < -2147483648 OR e.qux > 2147483647) CALL apoc.util.validate(true, 'qux must be between -2147483648 and 2147483647', []) RETURN NULL UNION UNWIND keys($assignedNodeProperties) AS prop UNWIND $assignedNodeProperties[prop] AS change WITH change WHERE change.node:Post AND change.key = \"qux\" AND change.new IS NOT NULL AND (change.new < -2147483648 OR change.new > 2147483647) CALL apoc.util.validate(true, 'qux must be between -2147483648 and 2147483647', []) RETURN NULL", {phase: "before"});

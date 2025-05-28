@@ -1,0 +1,33 @@
+schema: |-
+  CREATE PROPERTY GRAPH socialNetworkType {
+    (:Person {
+        givenName :: STRING(2, 50) NOT NULL,
+        familyName :: VARCHAR(50) NOT NULL,
+        age :: INT8 NOT NULL,
+        bio :: CHAR(16)
+    }) PRIMARY KEY (givenName, familyName),
+    (:Post {
+        title :: STRING(1, 100) NOT NULL,
+        content :: STRING,
+        created_at :: DATE
+    }) UNIQUE (title, content),
+    (:Person)~[:is_friend { since :: DATE NOT NULL }]~(:Person),
+    (:Person)-[:likes { since :: DATE NOT NULL }]->(:Post)
+  }
+
+cases:
+  - name: Minimal person
+    query: "CREATE (:Person { givenName: 'John', familyName: 'Doe', age: 35 })"
+    want_err: false
+  - name: Person with all properties
+    query: "CREATE (:Person { givenName: 'Jane', familyName: 'Doe', age: 30, bio: '10 character bio' })"
+    want_err: false
+  - name: Person with age out of range
+    query: "CREATE (p:Person { givenName: 'Johnothy', familyName: 'Doe', age: 150 })"
+    want_err: true
+  - name: Persons with same name
+    query: "CREATE (:Person { givenName: 'Max', familyName: 'Muster', age: 35 }), (:Person { givenName: 'Max', familyName: 'Muster', age: 40 })"
+    want_err: true
+  - name: Post with title only
+    query: "CREATE (:Post { title: 'Hello World' })"
+    want_err: false

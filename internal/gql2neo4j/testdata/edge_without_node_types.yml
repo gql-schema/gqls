@@ -1,0 +1,6 @@
+input: |-
+  CREATE PROPERTY GRAPH someGraphType {
+    ()-[:foo { id :: STRING }]->()
+  }
+want: |-
+  CREATE CONSTRAINT type_foo_id FOR ()-[n:foo]->() REQUIRE n.id IS :: STRING;

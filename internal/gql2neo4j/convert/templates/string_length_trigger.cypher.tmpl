@@ -1,0 +1,20 @@
+{{- /*gotype: github.com/gql-schema/gqls/internal/gql2neo4j.StringLengthTriggerData*/ -}}
+UNWIND {{.CreatedVariable}} AS e
+WITH e
+WHERE e:{{.Label}}
+  AND e.{{.PropertyName}} IS NOT NULL
+  AND (size(e.{{.PropertyName}}) < {{.MinLength}} OR size(e.{{.PropertyName}}) > {{.MaxLength}})
+CALL apoc.util.validate(true, '{{.PropertyName}} must be between {{.MinLength}} and {{.MaxLength}} characters', [])
+RETURN NULL
+
+UNION
+
+UNWIND keys({{.AssignedPropertiesVariable}}) AS prop
+UNWIND {{.AssignedPropertiesVariable}}[prop] AS change
+WITH change
+WHERE {{if eq .AssignedPropertiesVariable "$assignedNodeProperties"}}change.node{{else}}change.relationship{{end}}:{{.Label}}
+  AND change.key = "{{.PropertyName}}"
+  AND change.new IS NOT NULL
+  AND (size(change.new) < {{.MinLength}} OR size(change.new) > {{.MaxLength}})
+CALL apoc.util.validate(true, '{{.PropertyName}} must be between {{.MinLength}} and {{.MaxLength}} characters', [])
+RETURN NULL

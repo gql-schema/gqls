@@ -1,0 +1,82 @@
+schema: |-
+  CREATE PROPERTY GRAPH socialNetworkType {
+    (:Person { name :: STRING NOT NULL }) PRIMARY KEY (name),
+    (:Post { title :: STRING NOT NULL }) PRIMARY KEY (title),
+    (:Person)-(1,5)-[:FOLLOWS]-(0,*)->(:Person),
+    (:Person)-(0,*)-[:LIKES]-(0,*)->(:Post),
+    (:Person)<-(0,*)-[:WRITTEN_BY]-(1,1)-(:Post),
+    (:Person)-(2,10)-[:COLLABORATES_WITH]-(1,5)->(:Person)
+  }
+
+cases:
+  - name: Create single person and post
+    query: "CREATE (:Person { name: 'Alice' }), (:Post { title: 'First Post' })"
+    want_err: false
+  - name: Create valid FOLLOWS relationship within cardinality
+    query: |-
+      CREATE (p1:Person { name: 'Bob' }), (p2:Person { name: 'Charlie' })
+      CREATE (p1)-[:FOLLOWS]->(p2)
+    want_err: false
+  - name: Create valid LIKES relationship (unlimited)
+    query: |-
+      CREATE (p:Person { name: 'David' }), (post:Post { title: 'Great Post' })
+      CREATE (p)-[:LIKES]->(post)
+    want_err: false
+  - name: Create valid WRITTEN_BY relationship (exactly one)
+    query: |-
+      CREATE (p:Person { name: 'Eve' }), (post:Post { title: 'Eve Post' })
+      CREATE (p)<-[:WRITTEN_BY]-(post)
+    want_err: false
+  - name: Violate FOLLOWS upper bound cardinality
+    query: |-
+      CREATE (p1:Person { name: 'Frank' })
+      CREATE (p2:Person { name: 'Grace' }), (p3:Person { name: 'Henry' }),
+             (p4:Person { name: 'Iris' }), (p5:Person { name: 'Jack' }),
+             (p6:Person { name: 'Kate' }), (p7:Person { name: 'Leo' })
+      CREATE (p1)-[:FOLLOWS]->(p2), (p1)-[:FOLLOWS]->(p3),
+             (p1)-[:FOLLOWS]->(p4), (p1)-[:FOLLOWS]->(p5),
+             (p1)-[:FOLLOWS]->(p6), (p1)-[:FOLLOWS]->(p7)
+    want_err: true
+  - name: Violate WRITTEN_BY upper bound cardinality
+    query: |-
+      CREATE (p:Person { name: 'Mike' })
+      CREATE (post1:Post { title: 'Mike Post 1' }), (post2:Post { title: 'Mike Post 2' })
+      CREATE (p)<-[:WRITTEN_BY]-(post1), (p)<-[:WRITTEN_BY]-(post2)
+    want_err: true
+  - name: Create valid COLLABORATES_WITH relationship within both cardinalities
+    query: |-
+      CREATE (p1:Person { name: 'Nina' }), (p2:Person { name: 'Oscar' }),
+             (p3:Person { name: 'Paul' })
+      CREATE (p1)-[:COLLABORATES_WITH]->(p2), (p1)-[:COLLABORATES_WITH]->(p3)
+    want_err: false
+  - name: Violate COLLABORATES_WITH source lower bound cardinality
+    query: |-
+      CREATE (p1:Person { name: 'Quinn' }), (p2:Person { name: 'Rachel' })
+      CREATE (p1)-[:COLLABORATES_WITH]->(p2)
+    want_err: true
+  - name: Violate COLLABORATES_WITH source upper bound cardinality
+    query: |-
+      CREATE (p1:Person { name: 'Sam' })
+      CREATE (p2:Person { name: 'Tina' }), (p3:Person { name: 'Uma' }),
+             (p4:Person { name: 'Victor' }), (p5:Person { name: 'Wendy' }),
+             (p6:Person { name: 'Xavier' }), (p7:Person { name: 'Yara' }),
+             (p8:Person { name: 'Zack' }), (p9:Person { name: 'Amy' }),
+             (p10:Person { name: 'Ben' }), (p11:Person { name: 'Cara' }),
+             (p12:Person { name: 'Dan' })
+      CREATE (p1)-[:COLLABORATES_WITH]->(p2), (p1)-[:COLLABORATES_WITH]->(p3),
+             (p1)-[:COLLABORATES_WITH]->(p4), (p1)-[:COLLABORATES_WITH]->(p5),
+             (p1)-[:COLLABORATES_WITH]->(p6), (p1)-[:COLLABORATES_WITH]->(p7),
+             (p1)-[:COLLABORATES_WITH]->(p8), (p1)-[:COLLABORATES_WITH]->(p9),
+             (p1)-[:COLLABORATES_WITH]->(p10), (p1)-[:COLLABORATES_WITH]->(p11),
+             (p1)-[:COLLABORATES_WITH]->(p12)
+    want_err: true
+  - name: Violate COLLABORATES_WITH destination upper bound cardinality
+    query: |-
+      CREATE (p1:Person { name: 'Eve2' })
+      CREATE (p2:Person { name: 'Frank2' }), (p3:Person { name: 'Grace2' }),
+             (p4:Person { name: 'Henry2' }), (p5:Person { name: 'Iris2' }),
+             (p6:Person { name: 'Jack2' }), (p7:Person { name: 'Kate2' })
+      CREATE (p2)-[:COLLABORATES_WITH]->(p1), (p3)-[:COLLABORATES_WITH]->(p1),
+             (p4)-[:COLLABORATES_WITH]->(p1), (p5)-[:COLLABORATES_WITH]->(p1),
+             (p6)-[:COLLABORATES_WITH]->(p1), (p7)-[:COLLABORATES_WITH]->(p1)
+    want_err: true

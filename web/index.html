@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GQL to Neo4j Converter</title>
+  <meta name="description" content="Convert GQL schemas to Neo4j Cypher constraints and triggers using WebAssembly">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism.min.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <img src="assets/logo.png" alt="GQL to Neo4j Converter Logo" class="logo">
+      </div>
+      <h1>GQL to Neo4j Converter</h1>
+      <p class="subtitle">Convert GQL schemas to Neo4j Cypher constraints and triggers</p>
+      <div class="settings">
+        <div class="setting">
+          <label for="neo4j-version">Neo4j Version:</label>
+          <input id="neo4j-version" type="text" value="latest" />
+        </div>
+        <div class="setting">
+          <label for="apoc-enabled">
+            <input type="checkbox" id="apoc-enabled" />
+            Enable APOC
+          </label>
+        </div>
+      </div>
+    </header>
+    <main>
+      <div class="status-container">
+        <div id="loading-indicator" class="loading" style="display: none;">
+          <div class="spinner"></div>
+          <span class="loading-text">Initializing converter...</span>
+        </div>
+        <div id="error-message" class="error hidden"></div>
+      </div>
+      <div class="editor-container">
+        <div class="editor-column">
+          <h2>GQL Input</h2>
+          <div class="editor-header">
+            <button id="load-example" class="btn btn-secondary">Load Example</button>
+            <button id="clear-input" class="btn btn-secondary">Clear</button>
+          </div>
+          <textarea
+            id="gql-input"
+            placeholder="Enter your GQL schema here...&#10;&#10;Example:&#10;CREATE PROPERTY GRAPH socialNetworkType {&#10;  (:Person {&#10;    name :: STRING NOT NULL,&#10;    age :: INT8&#10;  }) PRIMARY KEY (name),&#10;  (:Person)-[:KNOWS]->(:Person)&#10;}"
+          ></textarea>
+        </div>
+        <div class="editor-column">
+          <h2>Neo4j Output</h2>
+          <div class="editor-header">
+            <button id="copy-output" class="btn btn-secondary">Copy</button>
+            <button id="download-output" class="btn btn-secondary">Download</button>
+          </div>
+          <pre><code id="neo4j-output" class="language-cypher">Neo4j conversion will appear here...</code></pre>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <p>
+        Powered by <a href="https://github.com/gql-schema/gqls" target="_blank">GQLS</a> |
+        Built with WebAssembly |
+        <a href="https://github.com/gql-schema/gqls/blob/main/README.md" target="_blank">Documentation</a> |
+        <span id="version-info">Loading version...</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast hidden">
+    <span id="toast-message"></span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-cypher.min.js"></script>
+  <script src="wasm_exec.js"></script>
+  <script src="wasm-loader.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

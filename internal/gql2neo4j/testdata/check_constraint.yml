@@ -1,0 +1,7 @@
+input: |-
+  CREATE PROPERTY GRAPH checkConstraintTestGraph {
+    (p:Person { age :: INT CHECK (age >= 18 AND age <= 120) })
+  }
+want: |-
+  CREATE CONSTRAINT type_person_age FOR (n:Person) REQUIRE n.age IS :: INTEGER;
+  CALL apoc.trigger.add("check_person_age", "UNWIND $createdNodes AS e WITH e WHERE e:Person AND e.age IS NOT NULL AND NOT (e.age>=18 AND e.age<=120) CALL apoc.util.validate(true, 'age violates check constraint: e.age>=18 AND e.age<=120', []) RETURN NULL UNION UNWIND keys($assignedNodeProperties) AS prop UNWIND $assignedNodeProperties[prop] AS change WITH change WHERE change.node:Person AND change.key = \"age\" AND change.new IS NOT NULL AND NOT (change.new>=18 AND change.new<=120) CALL apoc.util.validate(true, 'age violates check constraint: change.new>=18 AND change.new<=120', []) RETURN NULL", {phase: "before"});

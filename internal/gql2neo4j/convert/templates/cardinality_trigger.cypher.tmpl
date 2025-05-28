@@ -1,0 +1,27 @@
+{{- /*gotype: github.com/gql-schema/gqls/internal/gql2neo4j/convert.CardinalityTriggerData*/ -}}
+UNWIND $createdRelationships AS rel
+WITH rel, startNode(rel) AS startNode, endNode(rel) AS endNode
+WHERE type(rel) = "{{.RelationshipType}}"
+AND (
+{{- if and (.SourceLowerBound) (gt .SourceLowerBound 0) -}}
+  size([(startNode)-[:{{.RelationshipType}}]-() | 1]) < {{.SourceLowerBound}}
+{{- end -}}
+{{- if and (.SourceUpperBound) (ge .SourceUpperBound 0) -}}
+  {{- if and (.SourceLowerBound) (gt .SourceLowerBound 0)}} OR {{end -}}
+  size([(startNode)-[:{{.RelationshipType}}]-() | 1]) > {{.SourceUpperBound}}
+{{- end -}}
+{{- if and (.DestinationLowerBound) (gt .DestinationLowerBound 0) -}}
+  {{- if or (and (.SourceLowerBound) (gt .SourceLowerBound 0)) (and (.SourceUpperBound) (ge .SourceUpperBound 0))}} OR {{end -}}
+  size([()-[:{{.RelationshipType}}]->(endNode) | 1]) < {{.DestinationLowerBound}}
+{{- end -}}
+{{- if and (.DestinationUpperBound) (ge .DestinationUpperBound 0) -}}
+  {{- if or (and (.SourceLowerBound) (gt .SourceLowerBound 0)) (and (.SourceUpperBound) (ge .SourceUpperBound 0)) (and (.DestinationLowerBound) (gt .DestinationLowerBound 0))}} OR {{end -}}
+  size([()-[:{{.RelationshipType}}]->(endNode) | 1]) > {{.DestinationUpperBound}}
+{{- end}}
+)
+CALL apoc.util.validate(
+  true,
+  "{{.RelationshipType}} relationship cardinality constraint violated",
+  []
+)
+RETURN null

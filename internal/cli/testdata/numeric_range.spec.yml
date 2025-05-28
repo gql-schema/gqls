@@ -1,0 +1,71 @@
+schema: |-
+  CREATE PROPERTY GRAPH someGraphType {
+    (:Post { foo :: FLOAT16, bar :: INT8 }),
+    (:Post)-[:RELATES_TO { baz :: FLOAT, qux :: INT(4) }]->(:Post)
+  }
+
+cases:
+  # Node properties
+  - name: Create FLOAT16 at lower bound
+    query: "CREATE (:Post { foo: -32768.0 })"
+  - name: Create FLOAT16 below lower bound
+    query: "CREATE (:Post { foo: -32769.0 })"
+    want_err: true
+  - name: Create FLOAT16 at upper bound
+    query: "CREATE (:Post { foo: 32767.0 })"
+  - name: Create FLOAT16 above upper bound
+    query: "CREATE (:Post { foo: 32768.0 })"
+    want_err: true
+  - name: Create FLOAT16 is NULL
+    query: "CREATE (:Post { foo: NULL })"
+  - name: Create INT8 at upper bound
+    query: "CREATE (:Post { bar: 127 })"
+  - name: Create INT8 above upper bound
+    query: "CREATE (:Post { bar: 128 })"
+    want_err: true
+  - name: Create INT8 at lower bound
+    query: "CREATE (:Post { bar: -128 })"
+  - name: Create INT8 below lower bound
+    query: "CREATE (:Post { bar: -129 })"
+    want_err: true
+  - name: Update FLOAT16 at lower bound
+    query: |
+      CREATE (:Post { id: 1, foo: 0.0 });
+      MATCH (p:Post { id: 1 }) SET p.foo = -32768.0
+  - name: Update FLOAT16 below lower bound
+    query: |
+      CREATE (:Post { id: 2, foo: 0.0 });
+      MATCH (p:Post { id: 2 }) SET p.foo = -32769.0
+    want_err: true
+  - name: Update FLOAT16 at upper bound
+    query: |
+      CREATE (:Post { id: 3, foo: 0.0 });
+      MATCH (p:Post { id: 3 }) SET p.foo = 32767.0
+  - name: Update FLOAT16 above upper bound
+    query: |
+      CREATE (:Post { id: 4, foo: 0.0 });
+      MATCH (p:Post { id: 4 }) SET p.foo = 32768.0
+    want_err: true
+
+  # Relationship properties
+  - name: Create valid FLOAT & FLOAT(4)
+    query: "CREATE (:Post)-[:RELATES_TO { baz: 1.0, qux: 2 }]->(:Post)"
+  - name: Create FLOAT(4) at upper bound
+    query: "CREATE (:Post)-[:RELATES_TO { qux: 15 }]->(:Post)"
+  - name: Create FLOAT(4) above upper bound
+    query: "CREATE (:Post)-[:RELATES_TO { qux: 16 }]->(:Post)"
+    want_err: true
+  - name: Create FLOAT(4) at lower bound
+    query: "CREATE (:Post)-[:RELATES_TO { qux: -16 }]->(:Post)"
+  - name: Create FLOAT(4) below lower bound
+    query: "CREATE (:Post)-[:RELATES_TO { qux: -17 }]->(:Post)"
+    want_err: true
+  - name: Update FLOAT(4) at upper bound
+    query: |
+      CREATE (:Post)-[:RELATES_TO { baz: 0.0 }]->(:Post);
+      MATCH ()-[r:RELATES_TO]->() SET r.qux = 15
+  - name: Update FLOAT(4) above upper bound
+    query: |
+      CREATE (:Post)-[:RELATES_TO { baz: 0.0 }]->(:Post);
+      MATCH ()-[r:RELATES_TO]->() SET r.qux = 16
+    want_err: true

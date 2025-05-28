@@ -1,0 +1,15 @@
+CREATE PROPERTY GRAPH socialNetworkType {
+    (:Person {
+        givenName :: STRING(2, 50) NOT NULL, -- String with length constraints (2 to 50 chars)
+        familyName :: VARCHAR(50) NOT NULL,  -- Variable length string (max 50 chars)
+        age :: INT8 NOT NULL,                -- Integer with precision constraints (-128 to 127)
+        bio :: CHAR(200)                     -- Fixed length string (200 chars)
+    }) PRIMARY KEY (givenName, familyName),
+    (:Post {
+        title :: STRING(1, 100) NOT NULL,   -- String with length constraints (1 to 100 chars)
+        content :: STRING,
+        created_at :: DATE
+    }) UNIQUE (title, content),
+    (:Person)~[:is_friend { since :: DATE NOT NULL }]~(:Person),
+    (:Person)-(0,10)-[:likes { since :: DATE NOT NULL }]-(0,10)->(:Post)  -- Cardinality constraint (each Person can like between 0 and 10 Posts, and each Post can be liked by 0 to 10 Persons)
+}

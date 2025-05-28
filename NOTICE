@@ -1,0 +1,8 @@
+gqls
+Copyright 2025 Marc Trölitzsch
+
+This project includes a GQL parser based on the `GQL.g4` grammar
+from the OpenGQL project (`https://github.com/opengql`), which is
+licensed under the Apache License 2.0. The grammar file is located
+in the `internal/gql/grammar` directory of this repository as
+`GQL.g4`.

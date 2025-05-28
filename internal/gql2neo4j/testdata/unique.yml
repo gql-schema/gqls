@@ -1,0 +1,14 @@
+input: |-
+  CREATE PROPERTY GRAPH someGraphType {
+    (:Node { foo :: STRING UNIQUE, bar :: STRING }) UNIQUE (foo, bar),
+    ()-[:Rel { baz :: STRING UNIQUE, qux :: STRING }]->() UNIQUE (baz, qux)
+  }
+want: |-
+  CREATE CONSTRAINT unique_node_foo_bar FOR (n:Node) REQUIRE (n.foo, n.bar) IS UNIQUE;
+  CREATE CONSTRAINT type_node_foo FOR (n:Node) REQUIRE n.foo IS :: STRING;
+  CREATE CONSTRAINT unique_node_foo FOR (n:Node) REQUIRE n.foo IS UNIQUE;
+  CREATE CONSTRAINT type_node_bar FOR (n:Node) REQUIRE n.bar IS :: STRING;
+  CREATE CONSTRAINT unique_rel_baz_qux FOR ()-[n:Rel]->() REQUIRE (n.baz, n.qux) IS UNIQUE;
+  CREATE CONSTRAINT type_rel_baz FOR ()-[n:Rel]->() REQUIRE n.baz IS :: STRING;
+  CREATE CONSTRAINT unique_rel_baz FOR ()-[n:Rel]->() REQUIRE n.baz IS UNIQUE;
+  CREATE CONSTRAINT type_rel_qux FOR ()-[n:Rel]->() REQUIRE n.qux IS :: STRING;

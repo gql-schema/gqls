@@ -1,0 +1,14 @@
+input: |-
+  CREATE PROPERTY GRAPH someGraphType {
+    (:Node { foo :: STRING PRIMARY KEY, bar :: STRING }) PRIMARY KEY (foo, bar),
+    ()-[:Rel { baz :: STRING PRIMARY KEY, qux :: STRING }]->() PRIMARY KEY (baz, qux)
+  }
+want: |-
+  CREATE CONSTRAINT key_node_foo_bar FOR (n:Node) REQUIRE (n.foo, n.bar) IS NODE KEY;
+  CREATE CONSTRAINT type_node_foo FOR (n:Node) REQUIRE n.foo IS :: STRING;
+  CREATE CONSTRAINT key_node_foo FOR (n:Node) REQUIRE n.foo IS NODE KEY;
+  CREATE CONSTRAINT type_node_bar FOR (n:Node) REQUIRE n.bar IS :: STRING;
+  CREATE CONSTRAINT key_rel_baz_qux FOR ()-[n:Rel]->() REQUIRE (n.baz, n.qux) IS RELATIONSHIP KEY;
+  CREATE CONSTRAINT type_rel_baz FOR ()-[n:Rel]->() REQUIRE n.baz IS :: STRING;
+  CREATE CONSTRAINT key_rel_baz FOR ()-[n:Rel]->() REQUIRE n.baz IS RELATIONSHIP KEY;
+  CREATE CONSTRAINT type_rel_qux FOR ()-[n:Rel]->() REQUIRE n.qux IS :: STRING;

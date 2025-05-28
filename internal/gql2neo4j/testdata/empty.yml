@@ -1,0 +1,3 @@
+input: |-
+  CREATE PROPERTY GRAPH someGraphType;
+want: |-
