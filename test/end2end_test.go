@@ -1,6 +1,6 @@
 //go:build integration
 
-package cli_test
+package test_test
 
 import (
 	"context"
@@ -12,8 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/goccy/go-yaml"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -35,6 +37,7 @@ var (
 // testCase represents a single test case within a test specification.
 type testCase struct {
 	Name    string `yaml:"name"`
+	Setup   string `yaml:"setup"`
 	Query   string `yaml:"query"`
 	WantErr bool   `yaml:"want_err"`
 }
@@ -62,7 +65,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func TestGQLSchemaConversion(t *testing.T) {
+func TestIntegrationEnd2End(t *testing.T) {
 	testSpecPaths, err := filepath.Glob(testSpecPattern)
 	if err != nil {
 		t.Fatalf("failed to find test cases: %v", err)
@@ -70,23 +73,28 @@ func TestGQLSchemaConversion(t *testing.T) {
 
 	for _, testSpecPath := range testSpecPaths {
 		name := filepath.Base(testSpecPath)
-		spec := loadTestSpec(t, testSpecPath)
-
 		t.Run(name, func(t *testing.T) {
-			runSpecTest(t, name, spec)
+			t.Helper()
+
+			for i, tSpec := range loadTestSpecs(t, testSpecPath) {
+				t.Run(fmt.Sprintf("[%d]", i), func(t *testing.T) {
+					t.Helper()
+
+					withNeo4jSession(t, func(session neo4j.SessionWithContext) {
+						t.Helper()
+
+						for _, tCase := range tSpec.Cases {
+							t.Run(tCase.Name, func(t *testing.T) {
+								cleanDatabase(t, session)
+								createSchema(t, session, name, tSpec.Schema)
+								executeTestCase(t, session, tCase)
+							})
+						}
+					})
+				})
+			}
 		})
 	}
-}
-
-// runSpecTest executes a single test specification with proper setup and cleanup.
-func runSpecTest(t *testing.T, specName string, spec testSpec) {
-	t.Helper()
-
-	withNeo4jSession(t, func(session neo4j.SessionWithContext) {
-		cleanDatabase(t, session)
-		createSchema(t, session, specName, spec.Schema)
-		runTestCases(t, session, spec.Cases)
-	})
 }
 
 // createSchema applies the GQL schema to the Neo4j database.
@@ -95,21 +103,10 @@ func createSchema(t *testing.T, session neo4j.SessionWithContext, specName, sche
 
 	statements := convertGQLToNeo4j(t, schema)
 	for _, statement := range splitStatements(statements) {
-		t.Logf("Creating schema statement for spec %q: %s", specName, statement)
+		t.Logf("Creating schema for spec %q: %s", specName, statement)
 		if _, err := session.Run(t.Context(), statement, nil); err != nil {
 			t.Fatalf("failed to create statement for spec %q: %v", specName, err)
 		}
-	}
-}
-
-// runTestCases executes all test cases for a specification.
-func runTestCases(t *testing.T, session neo4j.SessionWithContext, cases []testCase) {
-	t.Helper()
-
-	for _, tCase := range cases {
-		t.Run(tCase.Name, func(t *testing.T) {
-			executeTestCase(t, session, tCase)
-		})
 	}
 }
 
@@ -117,29 +114,38 @@ func runTestCases(t *testing.T, session neo4j.SessionWithContext, cases []testCa
 func executeTestCase(t *testing.T, session neo4j.SessionWithContext, tCase testCase) {
 	t.Helper()
 
-	var anyError error
-	for _, statement := range splitStatements(tCase.Query) {
-		res, err := session.Run(t.Context(), statement, nil)
-		if err == nil {
-			// Consume the result to check for APOC trigger errors.
-			_, err = res.Consume(t.Context())
-		}
-		if err != nil && anyError == nil {
-			anyError = err
+	if tCase.Setup != "" {
+		if err := executeStatement(t, session, tCase.Setup); err != nil {
+			assert.Failf(t, "Setup failed", "failed to execute setup for test case %q: %v", tCase.Name, err)
 		}
 	}
 
+	err := executeStatement(t, session, tCase.Query)
 	if tCase.WantErr {
-		if anyError == nil {
-			t.Error("expected error, but got none")
-		}
-	} else if anyError != nil {
-		t.Errorf("unexpected error: %v", anyError)
+		assert.Error(t, err, "expected an error for test case %q, but got none", tCase.Name)
+	} else {
+		assert.NoError(t, err, "expected no error for test case %q", tCase.Name)
 	}
 }
 
-// loadTestSpec loads a test specification from a YAML file.
-func loadTestSpec(t *testing.T, path string) testSpec {
+func executeStatement(t *testing.T, session neo4j.SessionWithContext, statement string) error {
+	t.Helper()
+
+	result, err := session.Run(t.Context(), statement, nil)
+	if err != nil {
+		return fmt.Errorf("failed to execute statement %q: %w", statement, err)
+	}
+
+	// Consume the result to check for APOC trigger errors.
+	if _, err := result.Consume(t.Context()); err != nil {
+		return fmt.Errorf("failed to consume result for statement %q: %w", statement, err)
+	}
+
+	return nil
+}
+
+// loadTestSpecs loads test specifications from a YAML file.
+func loadTestSpecs(t *testing.T, path string) []testSpec {
 	t.Helper()
 
 	data, err := os.ReadFile(filepath.Clean(path))
@@ -147,11 +153,11 @@ func loadTestSpec(t *testing.T, path string) testSpec {
 		t.Fatalf("failed to read test file %q: %v", path, err)
 	}
 
-	var tc testSpec
-	if err := yaml.Unmarshal(data, &tc); err != nil {
+	var ts []testSpec
+	if err := yaml.Unmarshal(data, &ts); err != nil {
 		t.Fatalf("failed to unmarshal test file %q: %v", path, err)
 	}
-	return tc
+	return ts
 }
 
 // splitStatements splits a string into individual statements based on semicolons.
@@ -182,6 +188,7 @@ func convertGQLToNeo4j(t *testing.T, schema string) string {
 		"--input", inputPath,
 		"--output", outputPath,
 		"--neo4j-version", "latest",
+		"--neo4j-edition", "enterprise",
 		"--apoc",
 	})
 
@@ -327,8 +334,11 @@ func startNeo4jContainer(ctx context.Context) (testcontainers.Container, error) 
 				"NEO4J_AUTH":                       "none",
 				"NEO4J_ACCEPT_LICENSE_AGREEMENT":   "yes",
 				"NEO4J_dbms_usage__report_enabled": "false",
-				"NEO4JLABS_PLUGINS":                "[\"apoc\"]",
+				"NEO4J_PLUGINS":                    "[\"apoc\"]",
 				"NEO4J_apoc_trigger_enabled":       "true",
+			},
+			HostConfigModifier: func(hc *container.HostConfig) {
+				hc.AutoRemove = true
 			},
 		},
 		Started: true,

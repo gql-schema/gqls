@@ -6,6 +6,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 	"syscall/js"
 
 	"github.com/gql-schema/gqls/internal/gql2neo4j"
@@ -18,6 +19,7 @@ var version = "dev"
 type conversionRequest struct {
 	GQL          string `json:"gql"`
 	Neo4jVersion string `json:"neo4jVersion"`
+	Neo4jEdition string `json:"neo4jEdition"`
 	ApocEnabled  bool   `json:"apocEnabled"`
 }
 
@@ -42,8 +44,19 @@ func convertGQL(_ js.Value, args []js.Value) any {
 		return jsError(err)
 	}
 
+	var edition convert.Neo4jEdition
+	switch strings.ToLower(req.Neo4jEdition) {
+	case "community":
+		edition = convert.Neo4jCommunityEdition
+	case "enterprise":
+		edition = convert.Neo4jEnterpriseEdition
+	default:
+		edition = convert.Neo4jEnterpriseEdition
+	}
+
 	cypher, err := gql2neo4j.ConvertString(req.GQL, convert.DatabaseMetadata{
 		Version:     req.Neo4jVersion,
+		Edition:     edition,
 		APOCEnabled: req.ApocEnabled,
 	})
 	if err != nil {

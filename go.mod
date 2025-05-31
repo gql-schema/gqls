@@ -4,7 +4,8 @@ go 1.24
 
 require (
 	github.com/antlr4-go/antlr/v4 v4.13.1
-	github.com/goccy/go-yaml v1.17.1
+	github.com/docker/docker v28.1.1+incompatible
+	github.com/goccy/go-yaml v1.18.0
 	github.com/neo4j/neo4j-go-driver/v5 v5.28.1
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
@@ -21,7 +22,6 @@ require (
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.1.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.8.3 // indirect

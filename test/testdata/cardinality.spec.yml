@@ -1,0 +1,161 @@
+- name: Company with employees and departments
+  schema: |-
+    CREATE PROPERTY GRAPH companyStructure {
+      (:Employee { name :: STRING }),
+      (:Department { name :: STRING }),
+      (:Employee)-(1,1)-[:BELONGS_TO]-(1,*)->(:Department)
+    }
+  cases:
+    # CREATE
+    - name: Single employee in one department
+      query: |-
+        CREATE (e1:Employee {name: 'Alice'}),
+               (d1:Department {name: 'HR'}),
+               (e1)-[:BELONGS_TO]->(d1)
+    - name: Multiple employees in same department
+      query: |-
+        CREATE (e1:Employee {name: 'Alice'}),
+               (e2:Employee {name: 'Bob'}),
+               (d1:Department {name: 'HR'}),
+               (e1)-[:BELONGS_TO]->(d1),
+               (e2)-[:BELONGS_TO]->(d1)
+    - name: Employee without assigned department
+      query: |-
+        CREATE (e1:Employee {name: 'Alice'})
+      want_err: true
+    - name: Department without assigned employees
+      query: |-
+        CREATE (d1:Department {name: 'HR'})
+      want_err: true
+    - name: Employee assigned to multiple departments
+      query: |-
+        CREATE (e1:Employee {name: 'Alice'}),
+               (d1:Department {name: 'HR'}),
+               (d2:Department {name: 'Finance'}),
+               (e1)-[:BELONGS_TO]->(d1),
+               (e1)-[:BELONGS_TO]->(d2)
+      want_err: true
+    - name: Employee assigned to same department multiple times
+      query: |-
+        CREATE (e1:Employee {name: 'Alice'}),
+               (d1:Department {name: 'HR'}),
+               (e1)-[:BELONGS_TO]->(d1),
+               (e1)-[:BELONGS_TO]->(d1)
+      want_err: true
+
+- name: University with students, lectures, and lecturers
+  schema: |-
+    CREATE PROPERTY GRAPH university {
+      (:Student { name :: STRING }),
+      (:Lecture { title :: STRING }),
+      (:Lecturer { name :: STRING }),
+      (:Student)-(0,*)-[:ENROLLED_IN]-(3,*)->(:Lecture),
+      (:Lecture)<-(1,1)-[:TEACHES]-(0,*)-(:Lecturer)
+    }
+
+  cases:
+    # CREATE
+    - name: Student not enrolled in any lecture
+      query: |-
+        CREATE (s1:Student {name: 'Bob'})
+    - name: Lecturer not teaching any lecture
+      query: |-
+        CREATE (lecturer:Lecturer {name: 'Dr. Smith'})
+    - name: Lecture with zero students
+      query: |-
+        CREATE (lecture:Lecture {title: 'History 101'}),
+               (lecturer:Lecturer {name: 'Dr. Jones'}),
+               (lecturer)-[:TEACHES]->(lecture)
+      want_err: true
+    - name: Lecture with one student
+      query: |-
+        CREATE (s1:Student {name: 'Alice'}),
+               (lecture:Lecture {title: 'Math 101'}),
+               (lecturer:Lecturer {name: 'Dr. Smith'}),
+               (s1)-[:ENROLLED_IN]->(lecture),
+               (lecturer)-[:TEACHES]->(lecture)
+      want_err: true
+    - name: Lecture with two students
+      query: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}),
+               (lecture:Lecture {title: 'Math 101'}),
+               (lecturer:Lecturer {name: 'Dr. Smith'}),
+               (s1)-[:ENROLLED_IN]->(lecture), (s2)-[:ENROLLED_IN]->(lecture),
+               (lecturer)-[:TEACHES]->(lecture)
+      want_err: true
+    - name: Lecture with three students
+      query: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}), (s3:Student {name: 'Charlie'}),
+               (lecture:Lecture {title: 'Math 101'}),
+               (lecturer:Lecturer {name: 'Dr. Smith'}),
+               (s1)-[:ENROLLED_IN]->(lecture), (s2)-[:ENROLLED_IN]->(lecture), (s3)-[:ENROLLED_IN]->(lecture),
+               (lecturer)-[:TEACHES]->(lecture)
+    - name: Lecture with three students and one lecturer
+      query: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}), (s3:Student {name: 'Charlie'}),
+               (lecture:Lecture {title: 'Math 101'}),
+               (lecturer1:Lecturer {name: 'Dr. Smith'}), (lecturer2:Lecturer {name: 'Dr. Jones'}),
+               (s1)-[:ENROLLED_IN]->(lecture), (s2)-[:ENROLLED_IN]->(lecture), (s3)-[:ENROLLED_IN]->(lecture),
+               (lecturer1)-[:TEACHES]->(lecture), (lecturer2)-[:TEACHES]->(lecture)
+      want_err: true
+    - name: Two lectures with three students each and two lecturers
+      query: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}), (s3:Student {name: 'Charlie'}),
+               (lecture1:Lecture {title: 'Math 101'}), (lecture2:Lecture {title: 'Physics 101'}),
+               (lecturer1:Lecturer {name: 'Dr. Smith'}), (lecturer2:Lecturer {name: 'Dr. Jones'}),
+               (s1)-[:ENROLLED_IN]->(lecture1), (s2)-[:ENROLLED_IN]->(lecture1), (s3)-[:ENROLLED_IN]->(lecture1),
+               (s1)-[:ENROLLED_IN]->(lecture2), (s2)-[:ENROLLED_IN]->(lecture2), (s3)-[:ENROLLED_IN]->(lecture2),
+               (lecturer1)-[:TEACHES]->(lecture1),
+               (lecturer2)-[:TEACHES]->(lecture2)
+    - name: Lecture with three students but no lecturer
+      query: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}), (s3:Student {name: 'Charlie'}),
+               (lecture:Lecture {title: 'Chemistry 101'}),
+               (s1)-[:ENROLLED_IN]->(lecture), (s2)-[:ENROLLED_IN]->(lecture), (s3)-[:ENROLLED_IN]->(lecture)
+      want_err: true
+
+    # DELETE
+    - name: Delete student not enrolled in any lecture
+      setup: |-
+        CREATE (s1:Student {name: 'Echo'})
+      query: |-
+        MATCH (s:Student {name: 'Echo'})
+        DELETE s
+    - name: Delete :ENROLLED_IN leaves lecture with 3 students and 1 lecturer
+      setup: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}), (s3:Student {name: 'Charlie'}), (s4:Student {name: 'David'}),
+               (lecture:Lecture {title: 'Math 101'}),
+               (lecturer:Lecturer {name: 'Dr. Smith'}),
+               (s1)-[:ENROLLED_IN]->(lecture), (s2)-[:ENROLLED_IN]->(lecture), (s3)-[:ENROLLED_IN]->(lecture), (s4)-[:ENROLLED_IN]->(lecture),
+               (lecturer)-[:TEACHES]->(lecture)
+      query: |-
+        MATCH (:Student {name: 'David'})-[r:ENROLLED_IN]->(:Lecture {title: 'Math 101'})
+        DELETE r
+    - name: Delete :ENROLLED_IN leaves lecture with 2 students and 1 lecturer
+      setup: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}), (s3:Student {name: 'Charlie'}),
+               (lecture:Lecture {title: 'Math 101'}),
+               (lecturer:Lecturer {name: 'Dr. Smith'}),
+               (s1)-[:ENROLLED_IN]->(lecture), (s2)-[:ENROLLED_IN]->(lecture), (s3)-[:ENROLLED_IN]->(lecture),
+               (lecturer)-[:TEACHES]->(lecture)
+      query: |-
+        MATCH (:Student {name: 'Alice'})-[r:ENROLLED_IN]->(:Lecture {title: 'Math 101'})
+        DELETE r
+      want_err: true
+    - name: Delete lecturer not teaching any lecture
+      setup: |-
+        CREATE (lecturer:Lecturer {name: 'Dr. Wilson'})
+      query: |-
+        MATCH (l:Lecturer {name: 'Dr. Wilson'})
+        DELETE l
+    - name: Delete :TEACHES relationship removes lecturer from lecture
+      setup: |-
+        CREATE (s1:Student {name: 'Alice'}), (s2:Student {name: 'Bob'}), (s3:Student {name: 'Charlie'}),
+               (lecture:Lecture {title: 'History 101'}),
+               (lecturer:Lecturer {name: 'Dr. Adams'}),
+               (s1)-[:ENROLLED_IN]->(lecture), (s2)-[:ENROLLED_IN]->(lecture), (s3)-[:ENROLLED_IN]->(lecture),
+               (lecturer)-[:TEACHES]->(lecture)
+      query: |-
+        MATCH (:Lecturer {name: 'Dr. Adams'})-[r:TEACHES]->(:Lecture {title: 'History 101'})
+        DELETE r
+      want_err: true

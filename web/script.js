@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const neo4jOutput = document.getElementById('neo4j-output');
     const errorMessage = document.getElementById('error-message');
     const neo4jVersion = document.getElementById('neo4j-version');
+    const neo4jEdition = document.getElementById('neo4j-edition');
     const apocEnabled = document.getElementById('apoc-enabled');
     const loadingIndicator = document.getElementById('loading-indicator');
     const loadingText = document.querySelector('.loading-text');
@@ -72,6 +73,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearTimeout(debounceTimeout);
             debounceTimeout = setTimeout(convertGQL, 500);
         });
+    });
+
+    // Add change listener for select dropdown
+    neo4jEdition.addEventListener('change', () => {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(convertGQL, 500);
     });
 
     // Button event listeners
@@ -202,6 +209,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await converter.convert(
                 gql,
                 neo4jVersion.value || 'latest',
+                neo4jEdition.value || 'enterprise',
                 apocEnabled.checked
             );
 

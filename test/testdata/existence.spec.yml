@@ -1,0 +1,26 @@
+- schema: |
+    CREATE PROPERTY GRAPH someGraphType {
+      (:Person { id :: INTEGER NOT NULL, name :: STRING NOT NULL }),
+      (:Person)-[:IS_FRIEND_OF { id :: INTEGER NOT NULL }]->(:Person)
+    }
+
+  cases:
+    - name: Create node with valid INTEGER property
+      query: "CREATE (:Person { id: 1, name: 'Alice' })"
+    - name: Create node with NULL INTEGER property
+      query: "CREATE (:Person { id: NULL, name: 'Alice' })"
+      want_err: true
+    - name: Create node with valid STRING property
+      query: "CREATE (:Person { id: 2, name: 'Bob' })"
+    - name: Create node with NULL STRING property
+      query: "CREATE (:Person { id: 3, name: NULL })"
+      want_err: true
+    - name: Create relationship with valid NOT NULL property
+      query: |-
+        CREATE (p1:Person { id: 2, name: 'Alice' }), (p2:Person { id: 3, name: 'Alice' }),
+               (p1)-[:IS_FRIEND_OF { id: 4 }]->(p2)
+    - name: Create relationship with NULL property
+      query: |-
+        CREATE (p1:Person { id: 5, name: 'Alice' }), (p2:Person { id: 6, name: 'Alice' }),
+               (p1)-[:IS_FRIEND_OF { id: NULL }]->(p2)
+      want_err: true

@@ -34,7 +34,7 @@ type NodeType struct {
 type Cardinality struct {
 	// LowerBound is the lower bound of the cardinality. 0 implies no lower bound.
 	LowerBound int
-	// UpperBound is the upper bound of the cardinality. -1 implies no upper bound.
+	// UpperBound is the upper bound of the cardinality. math.MaxInt implies no upper bound.
 	UpperBound int
 }
 

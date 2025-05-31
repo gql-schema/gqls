@@ -1,0 +1,63 @@
+- schema: |-
+    CREATE PROPERTY GRAPH someGraphType {
+      (:Post { foo :: INTEGER PRIMARY KEY }),
+      (:Person { bar :: STRING, baz :: STRING }) PRIMARY KEY (bar, baz),
+      (:Post)-[:RELATED_TO { qux :: INTEGER PRIMARY KEY }]->(:Post),
+      (:Post)-[:AUTHORED_BY { quux :: INTEGER, corge :: STRING }]->(:Person) PRIMARY KEY (quux, corge)
+    }
+
+  cases:
+    - name: Create simple node PRIMARY KEY
+      query: "CREATE (:Post { foo: 1 })"
+    - name: Create simple node PRIMARY KEY with NULL
+      query: "CREATE (:Post { foo: NULL })"
+      want_err: true
+    - name: Create simple node PRIMARY KEY with duplicate value
+      setup: |-
+        CREATE (:Post { foo: 2 })
+      query: |
+        CREATE (:Post { foo: 2 })
+      want_err: true
+    - name: Create composite node PRIMARY KEY
+      query: "CREATE (:Person { bar: 'bar', baz: 'baz' })"
+    - name: Create composite node PRIMARY KEY with NULL
+      query: "CREATE (:Person { bar: 'bar', baz: NULL })"
+      want_err: true
+    - name: Create composite node PRIMARY KEY with duplicate values
+      setup: |-
+        CREATE (:Person { bar: 'bar1', baz: 'baz1' })
+      query: |
+        CREATE (:Person { bar: 'bar1', baz: 'baz1' })
+      want_err: true
+    - name: Create simple relationship PRIMARY KEY
+      query: |-
+        CREATE (p1:Post { foo: 1 }), (p2:Post { foo: 2 }),
+               (p1)-[:RELATED_TO { qux: 3 }]->(p2)
+    - name: Create simple relationship PRIMARY KEY with NULL
+      query: "CREATE (:Post)-[:RELATED_TO { qux: NULL }]->(:Post)"
+      want_err: true
+    - name: Create simple relationship PRIMARY KEY with duplicate value
+      setup: |-
+        CREATE (p1:Post { foo: 1 }), (p2:Post { foo: 2 }),
+               (p1)-[:RELATED_TO { qux: 2 }]->(p2)
+      query: |
+        MATCH (p1:Post { foo: 1 }), (p2:Post { foo: 2 }),
+              (p1)-[:RELATED_TO { qux: 2 }]->(p2)
+      want_err: true
+    - name: Create composite relationship PRIMARY KEY
+      query: |-
+        CREATE (p1:Post { foo: 1 }), (p2:Person { bar: 'bar', baz: 'baz' }),
+               (p1)-[:AUTHORED_BY { quux: 2, corge: 'corge' }]->(p2)
+    - name: Create composite relationship PRIMARY KEY with NULL
+      query: |-
+        CREATE (p1:Post { foo: 1 }), (p2:Person { bar: 'bar', baz: 'baz' }),
+               (p1)-[:AUTHORED_BY { quux: 2, corge: NULL }]->(p2)
+      want_err: true
+    - name: Create composite relationship PRIMARY KEY with duplicate values
+      setup: |
+        CREATE (p1:Post { foo: 1 }), (p2:Person { bar: 'bar1', baz: 'baz1' }),
+               (p1)-[:AUTHORED_BY { quux: 2, corge: 'corge1' }]->(p2)
+      query: |
+        MATCH (p1:Post { foo: 1 }), (p2:Person { bar: 'bar1', baz: 'baz1' })
+              (p1)-[:AUTHORED_BY { quux: 2, corge: 'corge1' }]->(p2)
+      want_err: true

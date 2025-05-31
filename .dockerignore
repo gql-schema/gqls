@@ -21,9 +21,12 @@ Thumbs.db
 .gitmodules
 
 # Project files
-examples/
+example.gql
 assets/
 .golangci.yml
+.goreleaser.yaml
+.pre-commit-config.yaml
+_config.yml
 LICENSE*
 NOTICE
 README.md

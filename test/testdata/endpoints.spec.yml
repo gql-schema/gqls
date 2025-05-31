@@ -1,0 +1,17 @@
+- schema: |-
+    CREATE PROPERTY GRAPH someGraphType {
+      (:Post { id :: INTEGER }),
+      (:Person { id :: INTEGER }),
+      (:Post)-[:RELATED_TO]->(:Post)
+    }
+
+  cases:
+    - name: RELATED_TO with valid endpoints
+      query: |-
+        CREATE (p1:Post { id: 1 }), (p2:Post { id: 2 }),
+               (p1)-[:RELATED_TO]->(p2)
+    - name: RELATED_TO with invalid endpoints
+      query: |-
+        CREATE (p1:Post { id: 3 }), (p2:Person { id: 4 }),
+               (p1)-[:RELATED_TO]->(p2)
+      want_err: true

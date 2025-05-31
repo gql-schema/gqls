@@ -59,7 +59,7 @@ build: generate
 
 .PHONY: build-static-site
 build-static-site: generate ## Build the static site
-	cp examples/schema.gql web/example-schema.gql
+	cp example.gql web/example-schema.gql
 	cp "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" web/wasm_exec.js
 	GOOS=js GOARCH=wasm $(GO) build -ldflags "-s -w -X 'main.version=$(VERSION)' -X 'main.commit=$(COMMIT)'" -o $(WASM_BINARY) $(WASM_ENTRYPOINT)
 
@@ -68,14 +68,19 @@ serve: build-static-site    ## Serve the web UI
 	cd web; python3 -m http.server 8000
 
 .PHONY: test
-test:                       ## Run unit tests
+test:                       ## Run all tests
 test: generate
-	$(GO) test -race -covermode=atomic -coverprofile=coverage.out ./... -v
+	$(GO) test -race -tags=integration ./... -v
+
+.PHONY: test-unit
+test-unit:                  ## Run unit tests
+test-unit: generate
+	$(GO) test -race ./... -v
 
 .PHONY: test-integration
-test-integration:           ## Run unit and integration tests
+test-integration:           ## Run integration tests
 test-integration: generate
-	$(GO) test -race -tags=integration ./... -v
+	$(GO) test -race -tags=integration -run=[iI]ntegration ./... -v
 
 .PHONY: clean
 clean:                      ## Clean up build artifacts

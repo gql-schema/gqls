@@ -10,6 +10,15 @@ import (
 	"text/template"
 )
 
+var templateFuncMap = template.FuncMap{
+	"slice": func() []string {
+		return make([]string, 0)
+	},
+	"append": func(slice []string, item string) []string {
+		return append(slice, item)
+	},
+}
+
 // getPrimaryLabel retrieves the first label from a label set.
 func getPrimaryLabel(labelSet []string) (string, error) {
 	if len(labelSet) == 0 {
@@ -99,7 +108,7 @@ func renderTemplate(templateName string, data any) (string, error) {
 		return "", fmt.Errorf("error reading template file: %w", err)
 	}
 
-	tmpl, err := template.New(templateName).Parse(string(tmplData))
+	tmpl, err := template.New(templateName).Funcs(templateFuncMap).Parse(string(tmplData))
 	if err != nil {
 		return "", fmt.Errorf("error parsing template: %w", err)
 	}

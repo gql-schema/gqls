@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/urfave/cli/v3"
 
@@ -41,6 +42,12 @@ func Run(ctx context.Context, version, commit string, args []string) {
 				Usage:       "Specify the Neo4j version to use for conversion",
 				DefaultText: "latest",
 			},
+			&cli.StringFlag{
+				Name:        "neo4j-edition",
+				Sources:     cli.EnvVars("GQLS_NEO4J_EDITION"),
+				Usage:       "Specify the Neo4j edition to use for conversion ('community', 'enterprise')",
+				DefaultText: "enterprise",
+			},
 			&cli.BoolFlag{
 				Name:        "apoc",
 				Usage:       "Generate APOC triggers",
@@ -63,8 +70,19 @@ func convertSchema(_ context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to read input: %w", err)
 	}
 
+	var edition convert.Neo4jEdition
+	switch strings.ToLower(cmd.String("neo4j-edition")) {
+	case "community":
+		edition = convert.Neo4jCommunityEdition
+	case "enterprise":
+		edition = convert.Neo4jEnterpriseEdition
+	default:
+		return fmt.Errorf("invalid Neo4j edition: %s, must be 'community' or 'enterprise'", cmd.String("neo4j-edition"))
+	}
+
 	converted, err := gql2neo4j.ConvertBytes(content, convert.DatabaseMetadata{
 		Version:     cmd.String("neo4j-version"),
+		Edition:     edition,
 		APOCEnabled: cmd.Bool("apoc"),
 	})
 	if err != nil {

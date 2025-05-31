@@ -2,6 +2,7 @@ package gql
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -309,11 +310,21 @@ func parseBinaryExactNumericType(ctx parser.IBinaryExactNumericTypeContext) (*da
 			precision = parsedPrecision
 		}
 
+		var notNullContext parser.INotNullContext
+		switch {
+		case signedBinaryExactNumericType.NotNull() != nil:
+			notNullContext = signedBinaryExactNumericType.NotNull()
+		case signedBinaryExactNumericType.VerboseBinaryExactNumericType() != nil:
+			notNullContext = signedBinaryExactNumericType.VerboseBinaryExactNumericType().NotNull()
+		default:
+			notNullContext = nil
+		}
+
 		return &datatype.NumericDataTypeDescriptor{
 			Kind:      datatype.NumericKindExact,
 			Radix:     datatype.RadixBinary,
 			Precision: precision,
-			Nullable:  parseNotNull(signedBinaryExactNumericType.NotNull()),
+			Nullable:  parseNotNull(notNullContext),
 		}, nil
 	} else if unsignedBinaryExactNumericType := ctx.UnsignedBinaryExactNumericType(); unsignedBinaryExactNumericType != nil {
 		return nil, fmt.Errorf("unsigned binary exact numeric type is not supported: %w", ErrNotImplemented)
@@ -394,8 +405,8 @@ func parseEdgeTypeSpecification(ctx parser.IEdgeTypeSpecificationContext) (*Edge
 
 // parseEdgeTypePattern parses the edge type pattern.
 func parseEdgeTypePattern(ctx parser.IEdgeTypePatternContext) (*EdgeType, error) {
-	sourceCardinality := Cardinality{0, -1}
-	destinationCardinality := Cardinality{0, -1}
+	sourceCardinality := Cardinality{0, math.MaxInt}
+	destinationCardinality := Cardinality{0, math.MaxInt}
 
 	if directed := ctx.EdgeTypePatternDirected(); directed != nil {
 		if pointingRight := directed.EdgeTypePatternPointingRight(); pointingRight != nil {
@@ -435,13 +446,13 @@ func parseEdgeTypePattern(ctx parser.IEdgeTypePatternContext) (*EdgeType, error)
 				edgeTypeFiller = pointingLeft.ArcTypePointingLeft().SimpleArcTypePointingLeft().EdgeTypeFiller()
 			case pointingLeft.ArcTypePointingLeft().ArcWithCardinalityPointingLeft() != nil:
 				edgeTypeFiller = pointingLeft.ArcTypePointingLeft().ArcWithCardinalityPointingLeft().EdgeTypeFiller()
-				source, err := parseCardinality(pointingLeft.ArcTypePointingLeft().ArcWithCardinalityPointingLeft().Cardinality(0))
+				source, err := parseCardinality(pointingLeft.ArcTypePointingLeft().ArcWithCardinalityPointingLeft().Cardinality(1))
 				if err != nil {
 					return nil, fmt.Errorf("error parsing cardinality: %w", err)
 				}
 				sourceCardinality = source
 
-				destination, err := parseCardinality(pointingLeft.ArcTypePointingLeft().ArcWithCardinalityPointingLeft().Cardinality(1))
+				destination, err := parseCardinality(pointingLeft.ArcTypePointingLeft().ArcWithCardinalityPointingLeft().Cardinality(0))
 				if err != nil {
 					return nil, fmt.Errorf("error parsing cardinality: %w", err)
 				}
@@ -490,7 +501,7 @@ func parseEdgeTypePattern(ctx parser.IEdgeTypePatternContext) (*EdgeType, error)
 }
 
 func parseCardinality(ctx parser.ICardinalityContext) (Cardinality, error) {
-	cardinality := Cardinality{LowerBound: 0, UpperBound: -1}
+	cardinality := Cardinality{LowerBound: 0, UpperBound: math.MaxInt}
 	if ctx == nil {
 		return cardinality, nil
 	}
@@ -505,7 +516,7 @@ func parseCardinality(ctx parser.ICardinalityContext) (Cardinality, error) {
 		}
 		if cardinalityUpperBound := cardinalityFiller.CardinalityUpperBound(); cardinalityUpperBound != nil {
 			if cardinalityUpperBound.ASTERISK() != nil {
-				cardinality.UpperBound = -1
+				cardinality.UpperBound = math.MaxInt
 			} else {
 				upperBound, err := strconv.Atoi(cardinalityUpperBound.UNSIGNED_DECIMAL_INTEGER().GetText())
 				if err != nil {

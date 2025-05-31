@@ -46,7 +46,7 @@ class WASMConverter {
         }
     }
 
-    async convert(gql, neo4jVersion, apocEnabled) {
+    async convert(gql, neo4jVersion, neo4jEdition, apocEnabled) {
         if (!this.loaded) {
             await this.load();
         }
@@ -58,6 +58,7 @@ class WASMConverter {
         const request = JSON.stringify({
             gql,
             neo4jVersion: neo4jVersion || 'latest',
+            neo4jEdition: neo4jEdition || 'enterprise',
             apocEnabled: Boolean(apocEnabled)
         });
 
